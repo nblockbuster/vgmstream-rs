@@ -3,12 +3,12 @@ const SAMPLE_BUFFER_SIZE: usize = 32768;
 use std::time::Instant;
 pub fn main() {
     let start = Instant::now();
-    let vgmstream = VGMStream::init("test_data/adx/mono.adx".to_string());
+    let mut vgmstream = VGMStream::init("test_data/adx/mono.adx".to_string());
     println!("{}hz, {} channels, {} samples total, {}s length", vgmstream.sample_rate, vgmstream.ch.len(), vgmstream.num_samples, vgmstream.num_samples / vgmstream.sample_rate);
     // assert_eq!(vgmstream.sample_rate, 48000);
     // assert_eq!(vgmstream.channels, 2);
     // println!("{:?}", vgmstream);
-    write_file(&mut vgmstream.clone());
+    write_file(&mut vgmstream);
     let end = start.elapsed();
     println!("{}ms", end.as_millis());
 }
@@ -21,7 +21,7 @@ fn write_file(vgmstream: &mut VGMStream) {
     let mut wav_header: Vec<u8> = vec![0;0x100];
     let len_samples = vgmstream.get_samples();
     make_wav_header(&mut wav_header, len_samples, vgmstream.sample_rate, vgmstream.channels, false, 0, 0);
-    let mut file = std::fs::File::create("test_data/adx/mono_aaaaa.bin.wav").unwrap();
+    let file = std::fs::File::create("test_data/adx/mono.wav").unwrap();
     let mut writer = std::io::BufWriter::new(file);
 
     writer.write_all(&wav_header).unwrap();
@@ -55,8 +55,8 @@ fn write_file(vgmstream: &mut VGMStream) {
     writer.flush().unwrap();
 }
 
-fn make_wav_header(buf: &mut Vec<u8>, sample_count: i32, sample_rate: i32, channels: i32, smpl_chunk: bool, loop_start: i32, loop_end: i32) -> usize {
-    let mut data_size = sample_count * channels * 2;
+fn make_wav_header(buf: &mut Vec<u8>, sample_count: i32, sample_rate: i32, channels: i32, smpl_chunk: bool, _loop_start: i32, loop_end: i32) -> usize {
+    let data_size = sample_count * channels * 2;
     let mut header_size: i32 = 0x2c;
     if smpl_chunk && loop_end != 0 {
         header_size += 0x3c+ 0x08;
@@ -67,15 +67,15 @@ fn make_wav_header(buf: &mut Vec<u8>, sample_count: i32, sample_rate: i32, chann
     }
 
     // memcpy(buf+0x00, "RIFF", 0x04); /* RIFF header */
-    buf[0x00..0x04].copy_from_slice(&"RIFF".as_bytes());
+    buf[0x00..0x04].copy_from_slice("RIFF".as_bytes());
     // put_32bitLE(buf+0x04, (int32_t)(header_size - 0x08 + data_size)); /* size of RIFF */
-    buf[0x04..0x08].copy_from_slice(&(header_size - 0x08 + data_size as i32).to_le_bytes());
+    buf[0x04..0x08].copy_from_slice(&(header_size - 0x08 + data_size).to_le_bytes());
 
     // memcpy(buf+0x08, "WAVE", 4); /* WAVE header */
-    buf[0x08..0x0c].copy_from_slice(&"WAVE".as_bytes());
+    buf[0x08..0x0c].copy_from_slice("WAVE".as_bytes());
 
     // memcpy(buf+0x0c, "fmt ", 0x04); /* WAVE fmt chunk */
-    buf[0x0c..0x10].copy_from_slice(&"fmt ".as_bytes());
+    buf[0x0c..0x10].copy_from_slice("fmt ".as_bytes());
 
     // put_s32le(buf+0x10, 0x10); /* size of WAVE fmt chunk */
     buf[0x10..0x14].copy_from_slice(&i32::to_le_bytes(0x10));
@@ -99,12 +99,12 @@ fn make_wav_header(buf: &mut Vec<u8>, sample_count: i32, sample_rate: i32, chann
     // }
     // else {
         // memcpy(buf+0x24, "data", 0x04); /* WAVE data chunk */
-        buf[0x24..0x28].copy_from_slice(&"data".as_bytes());
+        buf[0x24..0x28].copy_from_slice("data".as_bytes());
         // put_s32le(buf+0x28, (int32_t)data_size); /* size of WAVE data chunk */
         buf[0x28..0x2c].copy_from_slice(&data_size.to_le_bytes());
     // }
 
     /* could try to add channel_layout, but would need to write WAVEFORMATEXTENSIBLE (maybe only if arg flag?) */
 
-    return header_size as usize;
+    header_size as usize
 }

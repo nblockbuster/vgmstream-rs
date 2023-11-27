@@ -730,13 +730,11 @@ fn parse_wwise(sf: &mut Streamfile, ww: &mut WwiseHeader) -> bool {
 
     /* identify system's ADPCM */
     if ww.format == 0x0002 {
-        if ww.extra_size == 0x0c + ww.channels as isize * 0x2e {
+        if (ww.extra_size == 0x0c + ww.channels as isize * 0x2e) || (ww.extra_size == 0x0a && ww.wiih_offset != 0) {
             /* newer Wwise DSP with coefs [Epic Mickey 2 (Wii), Batman Arkham Origins Blackgate (3DS)] */
             ww.codec = WwiseCodec::DSP;
-        } else if ww.extra_size == 0x0a && ww.wiih_offset != 0 {
             /* WiiH */
             /* few older Wwise DSP with num_samples in extra_size [Tony Hawk: Shred (Wii)] */
-            ww.codec = WwiseCodec::DSP;
         } else if ww.block_size == 0x104 * ww.channels {
             /* Bayonetta 2 (Switch) */
             ww.codec = WwiseCodec::PTADPCM;

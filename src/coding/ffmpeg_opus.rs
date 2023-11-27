@@ -1,4 +1,4 @@
-use crate::{streamfile::Streamfile, vgmstream::VGMStreamCodecData};
+use crate::{streamfile::Streamfile, vgmstream::VGMStreamCodecData, coding};
 use rsmpeg::{
     avutil::AVMem,
     ffi::{AVCodec, AVCodecContext, AVFormatContext, AVFrame, AVIOContext, AVPacket},
@@ -468,7 +468,7 @@ pub unsafe fn opus_io_init(sf: &mut Streamfile, data: *mut OpusIOData) {
 
 pub fn opus_io_close(sf: &mut Streamfile, data: *mut std::ffi::c_void) {
     //;VGM_LOG("OPUS: closing\n");
-    let mut data: &mut OpusIOData = unsafe { std::mem::transmute(data) };
+    let data: &mut OpusIOData = unsafe { &mut *(data as *mut coding::ffmpeg_opus::OpusIOData) };
     // free(data.frame_table);
     data.frame_table = Vec::new();
 }
@@ -476,23 +476,23 @@ pub fn opus_io_close(sf: &mut Streamfile, data: *mut std::ffi::c_void) {
 pub fn opus_io_size(sf: &mut Streamfile, data: *mut std::ffi::c_void) -> usize {
     // off_t offset, max_offset;
     // size_t logical_size = 0;
-    let mut dataptr = data as *mut OpusIOData;
+    let dataptr = data as *mut OpusIOData;
     let mut packet = 0;
 
-    let mut data: &mut OpusIOData =  { std::mem::transmute(data) };
+    let data: &mut OpusIOData = unsafe { &mut *(data as *mut coding::ffmpeg_opus::OpusIOData) };
 
     if data.logical_size != 0 {
         return data.logical_size;
     }
 
     if data.stream_offset + data.stream_size
-        > sf.get_size(unsafe { dataptr as *mut std::ffi::c_void })
+        > sf.get_size(dataptr as *mut std::ffi::c_void)
     {
         println!(
             "OPUS: wrong streamsize {:x} + {:x} vs {:x}\n",
             data.stream_offset,
             data.stream_size,
-            sf.get_size(unsafe { dataptr as *mut std::ffi::c_void })
+            sf.get_size(dataptr as *mut std::ffi::c_void)
         );
         return 0;
     }
@@ -827,7 +827,7 @@ impl Streamfile {
         let mut offset = offset;
         let mut length = length;
         /* ignore bad reads */
-        if offset < 0 || offset > data.logical_size {
+        if offset > data.logical_size {
             return Vec::new();
         }
 

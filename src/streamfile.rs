@@ -66,7 +66,7 @@ impl Streamfile {
         self.reader
             .seek(std::io::SeekFrom::Start(offset as u64))
             .unwrap();
-        self.reader.read(&mut frame).unwrap();
+        self.reader.read_exact(&mut frame).unwrap();
         return frame;
     }
 
