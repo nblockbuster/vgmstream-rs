@@ -1,0 +1,7 @@
+/target
+/Cargo.lock
+/.cargo
+/.idea
+/.vscode
+/depend/ogg_next_sys
+/depend/aotuv_lancer_vorbis_sys

@@ -1,0 +1,6 @@
+[submodule "depend/vendor/ogg"]
+	path = depend/vendor/ogg
+	url = https://github.com/xiph/ogg.git
+[submodule "depend/vendor/vorbis"]
+	path = depend/vendor/vorbis
+	url = https://github.com/enzo1982/vorbis-aotuv-lancer.git
