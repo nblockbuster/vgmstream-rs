@@ -12,7 +12,7 @@ pub fn decode_adx(
     codec_config: u32,
 ) {
     // let frame: [u8; 0x12] = [0; 0x12];
-    let frame_offset: i32;
+    
     let mut sample_count = 0;
     // int i, frames_in, sample_count = 0;
     // size_t bytes_per_frame, samples_per_frame;
@@ -28,7 +28,7 @@ pub fn decode_adx(
     let first_sample = first_sample % samples_per_frame;
 
     /* parse frame header */
-    frame_offset = stream.offset as i32 + bytes_per_frame * frames_in;
+    let frame_offset = stream.offset as i32 + bytes_per_frame * frames_in;
 
     use std::io::{Seek, Read};
     let mut frame = vec![0; bytes_per_frame as usize];
@@ -44,7 +44,7 @@ pub fn decode_adx(
     let mut scale = get_s16be(&frame[0x00..]);
     match coding_type {
         CodingType::coding_CRI_ADX => {
-            scale = scale + 1;
+            scale += 1;
             coef1 = stream.adpcm_coef[0];
             coef2 = stream.adpcm_coef[1];
 
@@ -64,7 +64,7 @@ pub fn decode_adx(
         }
         CodingType::coding_CRI_ADX_fixed => {
             scale = (scale & 0x1fff) + 1;
-            coef1 = stream.adpcm_coef[(&frame[0] >> 5) as usize * 2 + 0];
+            coef1 = stream.adpcm_coef[(&frame[0] >> 5) as usize * 2];
             coef2 = stream.adpcm_coef[(&frame[0] >> 5) as usize * 2 + 1];
         }
         CodingType::coding_CRI_ADX_enc_8 | CodingType::coding_CRI_ADX_enc_9 => {
@@ -73,7 +73,7 @@ pub fn decode_adx(
             coef2 = stream.adpcm_coef[1];
         }
         _ => {
-            scale = scale + 1;
+            scale += 1;
             coef1 = stream.adpcm_coef[0];
             coef2 = stream.adpcm_coef[1];
         }

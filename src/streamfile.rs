@@ -1,7 +1,4 @@
-use std::io::{BufReader, Cursor, Read, Seek, self};
-
-use crate::coding::ffmpeg_opus::OpusIOData;
-
+use std::io::{BufReader, Cursor, Read, Seek};
 #[derive(Clone, PartialEq, Eq)]
 pub struct Streamfile {
     pub stream_index: i32,
@@ -53,24 +50,24 @@ impl Streamfile {
         })
     }
 
-    pub fn get_name(&mut self, data: *mut std::ffi::c_void) -> String {
-        return self.name.clone();
+    pub fn get_name(&mut self, _data: *mut std::ffi::c_void) -> String {
+        self.name.clone()
     }
 
-    pub fn close(&mut self, data: *mut std::ffi::c_void) {
+    pub fn close(&mut self, _data: *mut std::ffi::c_void) {
         self.reader = Cursor::new(Vec::new());
     }
 
-    pub fn read(&mut self, offset: usize, length: usize, data: *mut std::ffi::c_void) -> Vec<u8> {
-        let mut frame = vec![0; length as usize];
+    pub fn read(&mut self, offset: usize, length: usize, _data: *mut std::ffi::c_void) -> Vec<u8> {
+        let mut frame = vec![0; length];
         self.reader
             .seek(std::io::SeekFrom::Start(offset as u64))
             .unwrap();
         self.reader.read_exact(&mut frame).unwrap();
-        return frame;
+        frame
     }
 
-    pub fn get_size(&mut self, data: *mut std::ffi::c_void) -> usize {
+    pub fn get_size(&mut self, _data: *mut std::ffi::c_void) -> usize {
         self.reader.get_ref().len()
     }
 }
@@ -101,7 +98,7 @@ impl std::fmt::Debug for Streamfile {
 
 pub fn check_extensions(sf: &mut Streamfile, extensions: Vec<&str>) -> bool {
     let name = sf.name.clone();
-    let mut ext = name.split(".").last().unwrap().to_string();
+    let mut ext = name.split('.').last().unwrap().to_string();
     ext.make_ascii_lowercase();
     for extension in extensions {
         let mut ex = extension.to_string();
@@ -110,7 +107,7 @@ pub fn check_extensions(sf: &mut Streamfile, extensions: Vec<&str>) -> bool {
             return true;
         }
     }
-    return false;
+    false
 }
 
 pub fn read_u8(sf: &mut Streamfile, offset: usize) -> u8 {
@@ -119,11 +116,11 @@ pub fn read_u8(sf: &mut Streamfile, offset: usize) -> u8 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return buf[0];
+    buf[0]
 }
 
 pub fn read_s8(sf: &mut Streamfile, offset: usize) -> i8 {
-    return read_u8(sf, offset) as i8;
+    read_u8(sf, offset) as i8
 }
 
 pub fn read_u16le(sf: &mut Streamfile, offset: usize) -> u16 {
@@ -132,11 +129,11 @@ pub fn read_u16le(sf: &mut Streamfile, offset: usize) -> u16 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return u16::from_le_bytes(buf);
+    u16::from_le_bytes(buf)
 }
 
 pub fn read_s16le(sf: &mut Streamfile, offset: usize) -> i16 {
-    return read_u16le(sf, offset) as i16;
+    read_u16le(sf, offset) as i16
 }
 
 pub fn read_u32le(sf: &mut Streamfile, offset: usize) -> u32 {
@@ -145,11 +142,11 @@ pub fn read_u32le(sf: &mut Streamfile, offset: usize) -> u32 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return u32::from_le_bytes(buf);
+    u32::from_le_bytes(buf)
 }
 
 pub fn read_s32le(sf: &mut Streamfile, offset: usize) -> i32 {
-    return read_u32le(sf, offset) as i32;
+    read_u32le(sf, offset) as i32
 }
 
 pub fn read_u64le(sf: &mut Streamfile, offset: usize) -> u64 {
@@ -158,11 +155,11 @@ pub fn read_u64le(sf: &mut Streamfile, offset: usize) -> u64 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return u64::from_le_bytes(buf);
+    u64::from_le_bytes(buf)
 }
 
 pub fn read_s64le(sf: &mut Streamfile, offset: usize) -> i64 {
-    return read_u64le(sf, offset) as i64;
+    read_u64le(sf, offset) as i64
 }
 
 pub fn read_u16be(sf: &mut Streamfile, offset: usize) -> u16 {
@@ -171,11 +168,11 @@ pub fn read_u16be(sf: &mut Streamfile, offset: usize) -> u16 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return u16::from_be_bytes(buf);
+    u16::from_be_bytes(buf)
 }
 
 pub fn read_s16be(sf: &mut Streamfile, offset: usize) -> i16 {
-    return read_u16be(sf, offset) as i16;
+    read_u16be(sf, offset) as i16
 }
 
 pub fn read_u32be(sf: &mut Streamfile, offset: usize) -> u32 {
@@ -184,11 +181,11 @@ pub fn read_u32be(sf: &mut Streamfile, offset: usize) -> u32 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return u32::from_be_bytes(buf);
+    u32::from_be_bytes(buf)
 }
 
 pub fn read_s32be(sf: &mut Streamfile, offset: usize) -> i32 {
-    return read_u32be(sf, offset) as i32;
+    read_u32be(sf, offset) as i32
 }
 
 pub fn read_u64be(sf: &mut Streamfile, offset: usize) -> u64 {
@@ -197,11 +194,11 @@ pub fn read_u64be(sf: &mut Streamfile, offset: usize) -> u64 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return u64::from_be_bytes(buf);
+    u64::from_be_bytes(buf)
 }
 
 pub fn read_s64be(sf: &mut Streamfile, offset: usize) -> i64 {
-    return read_u64be(sf, offset) as i64;
+    read_u64be(sf, offset) as i64
 }
 
 pub fn read_f32le(sf: &mut Streamfile, offset: usize) -> f32 {
@@ -210,7 +207,7 @@ pub fn read_f32le(sf: &mut Streamfile, offset: usize) -> f32 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return f32::from_le_bytes(buf);
+    f32::from_le_bytes(buf)
 }
 
 pub fn read_f32be(sf: &mut Streamfile, offset: usize) -> f32 {
@@ -219,7 +216,7 @@ pub fn read_f32be(sf: &mut Streamfile, offset: usize) -> f32 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return f32::from_be_bytes(buf);
+    f32::from_be_bytes(buf)
 }
 
 pub fn read_f64le(sf: &mut Streamfile, offset: usize) -> f64 {
@@ -228,7 +225,7 @@ pub fn read_f64le(sf: &mut Streamfile, offset: usize) -> f64 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return f64::from_le_bytes(buf);
+    f64::from_le_bytes(buf)
 }
 
 pub fn read_f64be(sf: &mut Streamfile, offset: usize) -> f64 {
@@ -237,7 +234,7 @@ pub fn read_f64be(sf: &mut Streamfile, offset: usize) -> f64 {
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return f64::from_be_bytes(buf);
+    f64::from_be_bytes(buf)
 }
 
 pub fn is_id32be(sf: &mut Streamfile, offset: usize, id: &str) -> bool {
@@ -247,7 +244,7 @@ pub fn is_id32be(sf: &mut Streamfile, offset: usize, id: &str) -> bool {
 // #[allow(arithmetic_overflow)]
 pub fn get_id32be(s: &str) -> u32 {
     let s = s.as_bytes();
-    return ((s[0] as u32) << 24) | ((s[1] as u32) << 16) as u32 | ((s[2] as u32) << 8) as u32 | ((s[3] as u32) << 0) as u32;
+    ((s[0] as u32) << 24) | ((s[1] as u32) << 16) | ((s[2] as u32) << 8) | (s[3] as u32)
 }
 
 pub fn read_exact_bytes(sf: &mut Streamfile, offset: usize, size: usize) -> Vec<u8> {
@@ -256,5 +253,5 @@ pub fn read_exact_bytes(sf: &mut Streamfile, offset: usize, size: usize) -> Vec<
         .seek(std::io::SeekFrom::Start(offset as u64))
         .unwrap();
     sf.reader.read_exact(&mut buf).unwrap();
-    return buf;
+    buf
 }

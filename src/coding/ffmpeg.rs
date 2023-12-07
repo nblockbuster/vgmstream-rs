@@ -1,4 +1,4 @@
-use rsmpeg::{avutil::AVMem, ffi::AVRational};
+use rsmpeg::ffi::AVRational;
 
 use crate::{
     streamfile::Streamfile,
@@ -8,7 +8,7 @@ use crate::{
 use super::ffmpeg_opus::FFmpegCodecData;
 
 pub fn init_ffmpeg_offset(sf: &mut Streamfile, start: u64, size: u64) -> Option<FFmpegCodecData> {
-    return init_ffmpeg_header_offset(sf, &Vec::new(), start, size);
+    init_ffmpeg_header_offset(sf, &Vec::new(), start, size)
 }
 
 pub fn init_ffmpeg_header_offset(
@@ -17,11 +17,10 @@ pub fn init_ffmpeg_header_offset(
     start: u64,
     size: u64,
 ) -> Option<FFmpegCodecData> {
-    return init_ffmpeg_header_offset_subsong(sf, header, start, size, 0);
+    init_ffmpeg_header_offset_subsong(sf, header, start, size, 0)
 }
 
 use std::{
-    borrow::BorrowMut,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -92,7 +91,7 @@ pub fn init_ffmpeg_header_offset_subsong(
     //     return None;
     // }
     /* fake header to trick FFmpeg into demuxing/decoding the stream */
-    if header.len() > 0 {
+    if !header.is_empty() {
         data.header_size = header.len() as u64;
         // data.header_block = av_memdup(header, header_size);
         data.header_block = header.clone();
@@ -109,7 +108,7 @@ pub fn init_ffmpeg_header_offset_subsong(
 
     /* setup FFmpeg's internals, attempt to autodetect format and gather some info */
     unsafe {
-        let mut errcode = init_ffmpeg_config(&mut data, target_subsong, false);
+        let errcode = init_ffmpeg_config(&mut data, target_subsong, false);
         if errcode < 0 {
             return None;
         }
@@ -165,7 +164,7 @@ pub fn init_ffmpeg_header_offset_subsong(
     //     ffmpeg_set_force_seek(data);
     // }
 
-    return Some(data);
+    Some(data)
 }
 
 const FFMPEG_DEFAULT_IO_BUFFER_SIZE: usize = STREAMFILE_DEFAULT_BUFFER_SIZE;
@@ -254,7 +253,7 @@ pub unsafe fn init_ffmpeg_config(
             let mut streams: Vec<rsmpeg::ffi::AVStream> = Vec::from_raw_parts(*(*data.formatCtx).streams, (*data.formatCtx).nb_streams as usize, (*data.formatCtx).nb_streams as usize);
             let mut stream = streams[i as usize];
 
-            if stream.codecpar != std::ptr::null_mut()
+            if !stream.codecpar.is_null()
                 && (*stream.codecpar).codec_type == rsmpeg::ffi::AVMediaType_AVMEDIA_TYPE_AUDIO
             {
                 stream_count += 1;
@@ -348,7 +347,7 @@ pub unsafe fn init_ffmpeg_config(
     // data.buffer = buffer;
     // data.buffer.copy_from(buffer, FFMPEG_DEFAULT_IO_BUFFER_SIZE);
 
-    return 0;
+    0
 }
 
 /* ******************************************** */
@@ -357,11 +356,11 @@ pub unsafe fn init_ffmpeg_config(
 
 /* AVIO callback: read stream, handling custom data */
 pub unsafe extern "C" fn ffmpeg_read(
-    mut opaque: *mut std::ffi::c_void,
-    mut buf: *mut u8,
+    opaque: *mut std::ffi::c_void,
+    buf: *mut u8,
     read_size: i32,
 ) -> i32 {
-    let mut data: &mut FFmpegCodecData = std::mem::transmute(opaque);
+    let data: &mut FFmpegCodecData = &mut *(opaque as *mut crate::coding::ffmpeg_opus::FFmpegCodecData);
     // let bytes = 0;
     let mut max_to_copy = 0;
     let mut read_size = read_size;
@@ -400,9 +399,9 @@ pub unsafe extern "C" fn ffmpeg_read(
     /* main read */
 
     let mut sf2 = data.sf.clone();
-    let mut opus_data = sf2.as_mut().unwrap().data;
+    let opus_data = sf2.as_mut().unwrap().data;
     let read_func = data.sf.as_ref().unwrap().read.unwrap();
-    let data_read = read_func(&mut data.sf.as_mut().unwrap(), data.offset as usize, read_size as usize, opus_data);
+    let data_read = read_func(data.sf.as_mut().unwrap(), data.offset as usize, read_size as usize, opus_data);
 
     sf2.as_mut().unwrap().data = opus_data;
     data.sf = sf2;
@@ -414,7 +413,7 @@ pub unsafe extern "C" fn ffmpeg_read(
     data.offset += read_size as u64;
     data.logical_offset += read_size as u64;
 
-    return read_size;
+    read_size
 }
 
 /* AVIO callback: seek stream, handling custom data */
@@ -423,7 +422,7 @@ pub unsafe extern "C" fn ffmpeg_seek(
     offset: i64,
     whence: i32,
 ) -> i64 {
-    let mut data: &mut FFmpegCodecData = std::mem::transmute(opaque);
+    let data: &mut FFmpegCodecData = &mut *(opaque as *mut crate::coding::ffmpeg_opus::FFmpegCodecData);
     let mut offset = offset;
     let mut whence = whence;
     /* get cache'd size */
@@ -463,7 +462,7 @@ pub unsafe extern "C" fn ffmpeg_seek(
     /* main seek */
     data.logical_offset = offset as u64;
     data.offset = data.start + (offset as u64 - data.header_size);
-    return 0;
+    0
 }
 
 pub unsafe fn ffmpeg_get_codec_name(data: &FFmpegCodecData) -> &str {
@@ -480,7 +479,7 @@ pub unsafe fn ffmpeg_get_codec_name(data: &FFmpegCodecData) -> &str {
             std::ffi::CStr::from_ptr((*data.codec).name).to_bytes(),
         );
     }
-    return "";
+    ""
 }
 
 pub fn ffmpeg_set_force_seek(data: &mut FFmpegCodecData) {
@@ -545,8 +544,6 @@ pub fn seek_ffmpeg(data: &mut FFmpegCodecData, num_sample: i32) {
         data.samples_discard += data.skip_samples as i32;
         /* internally FFmpeg may skip (skip_samples/start_skip_samples) too */
     }
-
-    return;
 }
 
 pub unsafe fn free_ffmpeg_config(data: &mut FFmpegCodecData) {
@@ -654,19 +651,19 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
     let is_planar = unsafe {
         rsmpeg::ffi::av_sample_fmt_is_planar((*data.codecCtx).sample_fmt) == 1 && (channels > 1)
     };
-    let mut ibuf;
+    
 
-    if is_planar {
-        ibuf = unsafe { *(*data.frame).extended_data };
-    } else {
-        ibuf = unsafe { (*data.frame).data[0] };
-    }
+    // let ibuf = if is_planar {
+    //     unsafe { *(*data.frame).extended_data }
+    // } else {
+    //     unsafe { (*data.frame).data[0] }
+    // };
 
     match unsafe { (*data.codecCtx).sample_fmt.into() } {
         /* unused? */
         AVSampleFormat::AV_SAMPLE_FMT_U8P => {
             if is_planar {
-                let mut ibuf: &[&[u8]] = unsafe {
+                let ibuf: &[&[u8]] = unsafe {
                     std::slice::from_raw_parts(
                         (*data.frame).extended_data as *const &[u8],
                         channels as usize,
@@ -676,7 +673,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
             }
         }
         AVSampleFormat::AV_SAMPLE_FMT_U8 => {
-            let mut ibuf: &[u8] = unsafe {
+            let ibuf: &[u8] = unsafe {
                 std::slice::from_raw_parts((*data.frame).data[0], channels as usize)
             };
             samples_u8_to_s16(outbuf, ibuf, channels, samples_to_do, data.samples_consumed);
@@ -684,7 +681,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
         /* common */
         AVSampleFormat::AV_SAMPLE_FMT_S16P => {
             if is_planar {
-                let mut ibuf: &[&[i16]] = unsafe {
+                let ibuf: &[&[i16]] = unsafe {
                     std::slice::from_raw_parts(
                         (*data.frame).extended_data as *const &[i16],
                         channels as usize,
@@ -694,7 +691,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
             }
         }
         AVSampleFormat::AV_SAMPLE_FMT_S16 => {
-            let mut ibuf: &[i16] = unsafe {
+            let ibuf: &[i16] = unsafe {
                 std::slice::from_raw_parts((*data.frame).data[0] as *const i16, channels as usize)
             };
             samples_s16_to_s16(outbuf, ibuf, channels, samples_to_do, data.samples_consumed);
@@ -702,7 +699,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
         /* possibly FLAC and other lossless codecs */
         AVSampleFormat::AV_SAMPLE_FMT_S32P => {
             if is_planar {
-                let mut ibuf: &[&[i32]] = unsafe {
+                let ibuf: &[&[i32]] = unsafe {
                     std::slice::from_raw_parts(
                         (*data.frame).extended_data as *const &[i32],
                         channels as usize,
@@ -712,7 +709,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
             }
         }
         AVSampleFormat::AV_SAMPLE_FMT_S32 => {
-            let mut ibuf: &[i32] = unsafe {
+            let ibuf: &[i32] = unsafe {
                 std::slice::from_raw_parts((*data.frame).data[0] as *const i32, channels as usize)
             };
             samples_s32_to_s16(outbuf, ibuf, channels, samples_to_do, data.samples_consumed);
@@ -720,7 +717,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
         /* mainly MDCT-like codecs (Ogg, AAC, etc) */
         AVSampleFormat::AV_SAMPLE_FMT_FLTP => {
             if is_planar {
-                let mut ibuf: &[&[f32]] = unsafe {
+                let ibuf: &[&[f32]] = unsafe {
                     std::slice::from_raw_parts(
                         (*data.frame).extended_data as *const &[f32],
                         channels as usize,
@@ -737,7 +734,7 @@ pub fn copy_samples(data: &mut FFmpegCodecData, outbuf: &mut [i16], samples_to_d
             }
         }
         AVSampleFormat::AV_SAMPLE_FMT_FLT => {
-            let mut ibuf: &[f32] = unsafe {
+            let ibuf: &[f32] = unsafe {
                 std::slice::from_raw_parts((*data.frame).data[0] as *const f32, channels as usize)
             };
             samples_flt_to_s16(

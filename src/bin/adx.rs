@@ -46,12 +46,6 @@ fn write_file(vgmstream: &mut VGMStream) {
         writer.write_all(&buffer2).unwrap();
     }
 
-
-
-    // write raw buffer
-    // for i in 0..buffer.len() {
-    //     writer.write_all(&buffer[i].to_le_bytes()).unwrap();
-    // }
     writer.flush().unwrap();
 }
 
